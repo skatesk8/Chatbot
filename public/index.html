@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatBot Search</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="chat-wrapper">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Chats</h2>
+        <button id="newChatButton" type="button">New Chat</button>
+      </div>
+
+      <div id="chatList" class="chat-list"></div>
+    </aside>
+    <section class="chat-card">
+      <header class="chat-header">
+        <div><h1>ChatBot Airtechniques</h1></div>
+        <span class="status">Online</span>
+      </header>
+
+      <div id="chatMessages" class="chat-messages">
+        <div class="message bot">
+          <div class="bubble">Hi, feel free to ask me about suppliers, training courses, distributors, or sales representatives.</div>
+        </div>
+      </div>
+
+      <form id="chatForm" class="chat-form">
+        <input
+          id="questionInput"
+          type="text"
+          placeholder="Type your question..."
+          autocomplete="off"
+          required
+        />
+        <button type="submit">Enviar</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
