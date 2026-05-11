@@ -178,85 +178,84 @@ async function searchDatabase(question) {
   return { analysis, sources };
 }
 
-async function generateAIResponse(question, sources) {
+async function generateAIResponse(question, sources, history = []) {
+  const conversationHistory = history.length
+    ? history.map((msg) => `${msg.role}: ${msg.message}`).join('\n')
+    : 'No previous conversation.';
+
   const context = sources.length
     ? sources.map((item, index) => `
-    Source ${index + 1}
-    Title: ${item.title}
-    Type: ${item.type}
-    Description: ${item.description}
-    URL: ${item.url}
-    Email: ${item.extra.email || 'N/A'}
-    Phone: ${item.extra.phone || 'N/A'}
-    Website: ${item.extra.website || 'N/A'}
-    Categories: ${item.extra.categories || 'N/A'}
-    Locations: ${item.extra.locations || 'N/A'}
-    `).join('\n')
-        : 'No database results found. Use company knowledge to respond.';
+Source ${index + 1}
+Title: ${item.title}
+Type: ${item.type}
+Description: ${item.description}
+URL: ${item.url}
+Email: ${item.extra.email || 'N/A'}
+Phone: ${item.extra.phone || 'N/A'}
+Website: ${item.extra.website || 'N/A'}
+Categories: ${item.extra.categories || 'N/A'}
+Locations: ${item.extra.locations || 'N/A'}
+Stock Status: ${item.extra.stock_status || 'N/A'}
+Product Type: ${item.extra.product_type || 'N/A'}
+Product Tags: ${item.extra.product_tags || 'N/A'}
+Product Features: ${item.extra.product_features || 'N/A'}
+Product Model Groups: ${item.extra.product_model_groups || 'N/A'}
+`).join('\n')
+    : 'No database results found. Use company knowledge to respond.';
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        temperature: 0.2,
-        messages: [
-          {
-            role: 'system',
-            content: `
-            You are an assistant for Air Techniques.
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.1,
+    messages: [
+      {
+        role: 'system',
+        content: `
+You are an assistant for Air Techniques.
 
-            Always answer in English.
+Always answer in English.
 
-            Company context:
-            ${COMPANY_CONTEXT}
+Company context:
+${COMPANY_CONTEXT}
 
-            Rules:
-            - Always answer in English.
-            - Your main goal is to guide users toward Air Techniques products, solutions, dealers, training programs, and sales contacts.
-            - Use the database sources when they are available.
-            - If sources are available, ALWAYS encourage the user to explore them.
-            - If no database source is available, answer using the company context AND guide the user toward product-related topics.
+Rules:
+- Use the previous conversation to understand follow-up questions.
+- If the user asks "tell me more", "learn more", "what about that", or refers to something mentioned earlier, connect it to the previous conversation.
+- Use database sources when available.
+- Do not say you do not have information if a related source exists in the current sources or previous conversation.
+- When the user asks about products, structure the answer like this:
+  1. Brief intro sentence.
+  2. Numbered list of 3 to 5 relevant products or categories.
+  3. Short closing sentence inviting the user to choose a category or product.
+- Prefer concrete product/category/training/dealer names from the database sources.
+- Avoid starting answers with "Hello" unless the user greeted first.
+- If no database source is available, answer using the company context and guide the user toward Air Techniques products, imaging systems, hygiene products, mechanical systems, dealers, or training.
+- If the question is unrelated to Air Techniques or the dental industry, politely redirect the user back to Air Techniques.
+- Do not invent specific product details, phone numbers, emails, prices, dates, dealers, or training programs.
+- Do not include Markdown links in the answer. Sources are shown separately in the interface.
+        `
+      },
+      {
+        role: 'user',
+        content: `
+Previous conversation:
+${conversationHistory}
 
-            - For greetings like "Hello", "Hi", "Help me", or "I would like more information":
-              - Respond warmly
-              - Mention at least one type of product (imaging, hygiene, mechanical systems)
-              - Suggest what they can explore next
-              - Ask a guiding follow-up question
+Current user question:
+${question}
 
-            - Always include a soft call-to-action (CTA), such as:
-              - "You can explore..."
-              - "Would you like to learn more about..."
-              - "I can show you..."
-              - "Let me know if you want details about..."
+Database sources:
+${context}
+        `
+      }
+    ]
+  });
 
-            - If sources are available, refer to them naturally (do not paste raw links).
-
-            - If the question is unrelated:
-              - Politely redirect
-              - Suggest asking about products or solutions
-
-            - Do not invent specific product details, phone numbers, emails, prices, dates, dealers, or training programs.
-            - Keep responses brief, helpful, and business-friendly.
-            - Do not include Markdown links in the answer. Sources are shown separately in the interface.
-            `
-          },
-          {
-            role: 'user',
-            content: `
-    User question:
-    ${question}
-
-    Database sources:
-    ${context}
-            `
-          }
-        ]
-      });
-
-      return completion.choices[0].message.content;
+  return completion.choices[0].message.content;
 }
 
-async function getAnswerFromQuestion(question) {
+async function getAnswerFromQuestion(question, history = []) {
   const { analysis, sources } = await searchDatabase(question);
-  const answer = await generateAIResponse(question, sources);
+  const answer = await generateAIResponse(question, sources, history);
 
   return {
     answer,

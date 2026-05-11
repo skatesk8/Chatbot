@@ -27,21 +27,36 @@ async function createChat(req, res) {
 
 async function getChats(req, res) {
   try {
+    const userIdentifier = req.query.user_identifier;
+
+    if (!userIdentifier) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_identifier is required'
+      });
+    }
+
     const result = await pool.query(
       `
       SELECT *
       FROM chat_sessions
+      WHERE user_identifier = $1
       ORDER BY updated_at DESC
-      `
+      `,
+      [userIdentifier]
     );
 
-    res.json({
+    return res.json({
       success: true,
       chats: result.rows
     });
   } catch (error) {
-    console.error('Error getting chats:', error);
-    res.status(500).json({ success: false, message: 'Error getting chats' });
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
 }
 
@@ -79,6 +94,30 @@ async function getChatById(req, res) {
   } catch (error) {
     console.error('Error getting chat:', error);
     res.status(500).json({ success: false, message: 'Error getting chat' });
+  }
+}
+
+async function getAllChats(req, res) {
+  try {
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM chat_sessions
+      ORDER BY updated_at DESC
+      `
+    );
+
+    return res.json({
+      success: true,
+      chats: result.rows
+    });
+  } catch (error) {
+    console.error('Error getting all chats:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
 }
 
@@ -121,7 +160,18 @@ async function sendMessage(req, res) {
 
     await client.query('COMMIT');
 
-    const aiResult = await getAnswerFromQuestion(question);
+    const historyResult = await client.query(
+      `
+      SELECT role, message
+      FROM chat_messages
+      WHERE session_id = $1
+      ORDER BY created_at ASC
+      LIMIT 10
+      `,
+      [id]
+    );
+
+    const aiResult = await getAnswerFromQuestion(question, historyResult.rows);
 
     await client.query('BEGIN');
 
@@ -191,6 +241,7 @@ async function deleteChat(req, res) {
 module.exports = {
   createChat,
   getChats,
+  getAllChats,
   getChatById,
   sendMessage,
   deleteChat

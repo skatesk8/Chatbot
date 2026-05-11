@@ -97,7 +97,7 @@ async function createChat() {
     },
     body: JSON.stringify({
       title: 'New Chat',
-      user_identifier: 'guest'
+      user_identifier: '4005'
     })
   });
 

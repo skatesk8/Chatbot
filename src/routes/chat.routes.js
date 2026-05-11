@@ -4,9 +4,10 @@ const router = express.Router();
 const {
   createChat,
   getChats,
+  getAllChats,
   getChatById,
   sendMessage,
-  deleteChat
+  deleteChat,
 } = require('../controllers/chat.controller');
 
 router.post('/chats', createChat);
@@ -14,5 +15,6 @@ router.get('/chats', getChats);
 router.get('/chats/:id', getChatById);
 router.post('/chats/:id/message', sendMessage);
 router.delete('/chats/:id', deleteChat);
+router.get('/admin/chats', getAllChats);
 
 module.exports = router;
