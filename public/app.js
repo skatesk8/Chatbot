@@ -5,6 +5,12 @@ const chatList = document.getElementById('chatList');
 const newChatButton = document.getElementById('newChatButton');
 
 let currentChatId = localStorage.getItem('currentChatId');
+let userIdentifier = localStorage.getItem('userIdentifier');
+
+if (!userIdentifier) {
+  userIdentifier = '4005';
+  localStorage.setItem('userIdentifier', userIdentifier);
+}
 
 function addMessage(type, text, sources = []) {
   const message = document.createElement('div');
@@ -61,7 +67,7 @@ function clearMessages() {
 }
 
 async function loadChatList() {
-  const response = await fetch('/api/chats');
+  const response = await fetch(`/api/chats?user_identifier=${userIdentifier}`);
   const data = await response.json();
 
   if (!data.success) return;
@@ -97,7 +103,7 @@ async function createChat() {
     },
     body: JSON.stringify({
       title: 'New Chat',
-      user_identifier: '4005'
+      user_identifier: userIdentifier
     })
   });
 
