@@ -39,8 +39,68 @@ function normalizeText(text) {
     .trim();
 }
 
+function isBadUrl(url) {
+  if (!url) return true;
+
+  return (
+    url.includes('?post_type=') ||
+    url.includes('?p=') ||
+    url.includes('&p=')
+  );
+}
+
+function isGreeting(question) {
+  const q = normalizeText(question);
+
+  return (
+    q === 'hello' ||
+    q === 'hi' ||
+    q === 'hey' ||
+    q === 'help' ||
+    q.includes('help me') ||
+    q.includes('more information')
+  );
+}
+
+function isOutOfScope(question) {
+  const q = normalizeText(question);
+
+  if (isGreeting(question)) return false;
+
+  const allowedTerms = [
+    'air techniques',
+    'dental',
+    'product',
+    'products',
+    'equipment',
+    'imaging',
+    'hygiene',
+    'mechanical',
+    'dealer',
+    'dealers',
+    'training',
+    'sales',
+    'representative',
+    'supplier',
+    'distributor',
+    'contact',
+    'phone',
+    'email'
+  ];
+
+  return !allowedTerms.some(term => q.includes(term));
+}
+
 function detectIntent(question) {
   const q = normalizeText(question);
+
+  if (isGreeting(question)) {
+    return {
+      intent: 'greeting',
+      postType: 'product',
+      terms: ['imaging', 'hygiene', 'mechanical', 'product', 'equipment']
+    };
+  }
 
   if (q.includes('proveedor') || q.includes('distribuidor') || q.includes('dealer')) {
     return { intent: 'dealers', postType: 'dealer', terms: ['dealer', 'distributor', 'equipment'] };
@@ -153,7 +213,7 @@ async function searchDatabase(question) {
     result = fallback;
   }
 
-  const sources = result.rows.map(row => ({
+  let sources = result.rows.filter(row => !isBadUrl(row.permalink)).map(row => ({
     id: row.id,
     title: row.title,
     description: cleanText(row.content, 450),
@@ -174,6 +234,10 @@ async function searchDatabase(question) {
         product_model_groups: row.product_model_groups || null
     }
   }));
+
+  if (isOutOfScope(question) && analysis.intent === 'general') {
+    sources = [];
+  }
 
   return { analysis, sources };
 }
@@ -230,6 +294,7 @@ Rules:
 - Avoid starting answers with "Hello" unless the user greeted first.
 - If no database source is available, answer using the company context and guide the user toward Air Techniques products, imaging systems, hygiene products, mechanical systems, dealers, or training.
 - If the question is unrelated to Air Techniques or the dental industry, politely redirect the user back to Air Techniques.
+- If the question is unrelated to Air Techniques or dental products, do not use database sources and politely redirect the user back to Air Techniques topics.
 - Do not invent specific product details, phone numbers, emails, prices, dates, dealers, or training programs.
 - Do not include Markdown links in the answer. Sources are shown separately in the interface.
         `
